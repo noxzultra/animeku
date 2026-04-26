@@ -3,18 +3,10 @@
 // ======================
 const ANILIST_API = 'https://graphql.anilist.co';
 
-// Multi-source embed player
 const EMBED_SOURCES = {
-  // VidSrc (pakai subdomain baru)
   vidSrc: (malId, epNum) => `https://vidsrc.xyz/embed/anime/${malId}/${epNum}`,
-  
-  // VidSrc alternative domain
   vidSrc2: (malId, epNum) => `https://vidsrc.me/embed/anime/${malId}/${epNum}`,
-  
-  // VidSrc backup
   vidSrc3: (malId, epNum) => `https://vidsrc.in/embed/anime/${malId}/${epNum}`,
-  
-  // 2embed (backup)
   twoEmbed: (malId, epNum) => `https://www.2embed.cc/embed/${malId}/${epNum}`,
 };
 
@@ -23,11 +15,13 @@ const EMBED_SOURCES = {
 // ======================
 let currentPage = 1;
 let hasNextPage = false;
-let currentView = 'trending'; // trending | popular | search
+let currentView = 'trending';
 let currentSearch = '';
 let currentAnime = null;
 let episodeCount = 0;
 let currentEpNum = 1;
+let currentSourceIndex = 0;
+const totalSources = 4;
 
 // ======================
 // DOM
@@ -281,7 +275,7 @@ async function showDetail(anime) {
 
 function generateEpisodeButtons(count, malId) {
   let buttons = '';
-  const maxShow = Math.min(count, 100); // Max 100 episode ditampilkan
+  const maxShow = Math.min(count, 100);
   for (let i = 1; i <= maxShow; i++) {
     buttons += `<button class="ep-btn" onclick="watchAnime(${malId}, ${i})">${i}</button>`;
   }
@@ -289,20 +283,22 @@ function generateEpisodeButtons(count, malId) {
 }
 
 // ======================
-// WATCH ANIME
+// WATCH ANIME (UPDATED)
 // ======================
 function watchAnime(malId, epNum) {
   showLoading();
   currentEpNum = epNum;
+  currentSourceIndex = 0;
   
   animeSection.style.display = 'none';
   detailSection.style.display = 'none';
   watchSection.style.display = 'block';
   
-  // Coba beberapa source embed
   const sources = [
-    { name: 'VidSrc (Primary)', url: EMBED_SOURCES.vidSrc(malId, epNum) },
-    { name: 'VidStream (Backup)', url: EMBED_SOURCES.vidStream(malId, epNum) },
+    { name: 'VidSrc XYZ', url: EMBED_SOURCES.vidSrc(malId, epNum) },
+    { name: 'VidSrc ME', url: EMBED_SOURCES.vidSrc2(malId, epNum) },
+    { name: 'VidSrc IN', url: EMBED_SOURCES.vidSrc3(malId, epNum) },
+    { name: '2Embed', url: EMBED_SOURCES.twoEmbed(malId, epNum) },
   ];
   
   watchContainer.innerHTML = `
@@ -329,15 +325,44 @@ function watchAnime(malId, epNum) {
     </div>
     
     <div style="text-align:center; margin-top:1rem;">
-      <p style="font-size:0.8rem; color:#888;">
-        Menggunakan: ${sources[0].name} | 
-        <a href="#" onclick="switchSource(${malId}, ${epNum})" style="color:#ff4757;">Ganti Source</a> kalau error
+      <p style="font-size:0.8rem; color:#888; margin-bottom:0.5rem;">
+        Source: ${sources[0].name}
       </p>
+      <button onclick="tryNextSource(${malId}, ${epNum})" style="padding:0.5rem 1rem; background:#ff4757; color:white; border:none; border-radius:5px; cursor:pointer;">
+        🔄 Ganti Source (${sources.length} tersedia)
+      </button>
     </div>
   `;
   
   window.scrollTo(0, 0);
   hideLoading();
+}
+
+// ======================
+// SWITCH SOURCE (UPDATED)
+// ======================
+function tryNextSource(malId, epNum) {
+  currentSourceIndex = (currentSourceIndex + 1) % totalSources;
+  
+  const allSources = [
+    EMBED_SOURCES.vidSrc(malId, epNum),
+    EMBED_SOURCES.vidSrc2(malId, epNum),
+    EMBED_SOURCES.vidSrc3(malId, epNum),
+    EMBED_SOURCES.twoEmbed(malId, epNum),
+  ];
+  
+  const sourceNames = ['VidSrc XYZ', 'VidSrc ME', 'VidSrc IN', '2Embed'];
+  
+  const frame = document.getElementById('videoFrame');
+  if (frame) {
+    frame.src = allSources[currentSourceIndex];
+    
+    // Update source text
+    const sourceText = document.querySelector('.episode-nav + div p');
+    if (sourceText) {
+      sourceText.textContent = `Source: ${sourceNames[currentSourceIndex]}`;
+    }
+  }
 }
 
 // ======================
@@ -356,19 +381,6 @@ function jumpToEp() {
   const newEp = parseInt(select.value);
   const malId = currentAnime?.idMal || currentAnime?.id;
   watchAnime(malId, newEp);
-}
-
-let sourceIndex = 0;
-function switchSource(malId, epNum) {
-  sourceIndex = (sourceIndex + 1) % 2;
-  const sources = [
-    EMBED_SOURCES.vidSrc(malId, epNum),
-    EMBED_SOURCES.vidStream(malId, epNum),
-  ];
-  const frame = document.getElementById('videoFrame');
-  if (frame) {
-    frame.src = sources[sourceIndex];
-  }
 }
 
 // ======================
