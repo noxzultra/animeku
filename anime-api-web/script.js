@@ -2,7 +2,7 @@
 // KONFIGURASI API
 // ======================
 const CONSUMET_API = 'https://api.consumet.org/anime/gogoanime';
-const CORS_PROXY = 'https://api.allorigins.win/raw?url='; // Proxy untuk handle CORS
+const CORS_PROXY = 'https://thingproxy.freeboard.io/fetch/'; // Proxy untuk handle CORS
 
 // ======================
 // STATE MANAGEMENT
