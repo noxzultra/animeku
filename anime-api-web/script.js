@@ -4,10 +4,29 @@
 const ANILIST_API = 'https://graphql.anilist.co';
 
 const EMBED_SOURCES = {
-  vidSrc: (malId, epNum) => `https://vidsrc.xyz/embed/anime/${malId}/${epNum}`,
-  vidSrc2: (malId, epNum) => `https://vidsrc.me/embed/anime/${malId}/${epNum}`,
-  vidSrc3: (malId, epNum) => `https://vidsrc.in/embed/anime/${malId}/${epNum}`,
-  twoEmbed: (malId, epNum) => `https://www.2embed.cc/embed/${malId}/${epNum}`,
+  // Samehadaku (server Indonesia)
+  samehadaku: (title, epNum) => {
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `https://samehadaku.mba/${slug}-episode-${epNum}/`;
+  },
+  
+  // Otakudesu (server Indonesia)
+  otakudesu: (title, epNum) => {
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `https://otakudesu.cloud/episode/${slug}-episode-${epNum}/`;
+  },
+  
+  // Anoboy (server Indonesia)
+  anoboy: (title, epNum) => {
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `https://anoboy.ch/${slug}-episode-${epNum}-subtitle-indonesia/`;
+  },
+  
+  // Anime Indo
+  animeindo: (title, epNum) => {
+    const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    return `https://animeindo.lol/${slug}-episode-${epNum}/`;
+  },
 };
 
 // ======================
@@ -88,7 +107,7 @@ async function fetchTrending(page = 1) {
     currentPage = page;
     updatePagination();
   } catch (e) {
-    animeGrid.innerHTML = '<p style="color:red;">❌ Gagal memuat data.</p>';
+    animeGrid.innerHTML = '<p style="color:red;">❌ Gagal memuat data. Coba refresh.</p>';
   }
   hideLoading();
 }
@@ -120,7 +139,7 @@ async function fetchPopular(page = 1) {
     currentPage = page;
     updatePagination();
   } catch (e) {
-    animeGrid.innerHTML = '<p style="color:red;">❌ Gagal memuat data.</p>';
+    animeGrid.innerHTML = '<p style="color:red;">❌ Gagal memuat data. Coba refresh.</p>';
   }
   hideLoading();
 }
@@ -164,7 +183,7 @@ function renderAnimeGrid(mediaList) {
   animeGrid.innerHTML = '';
   
   if (!mediaList || mediaList.length === 0) {
-    animeGrid.innerHTML = '<p>Tidak ada anime ditemukan.</p>';
+    animeGrid.innerHTML = '<p style="text-align:center; padding:2rem;">Tidak ada anime ditemukan.</p>';
     return;
   }
 
@@ -257,7 +276,8 @@ async function showDetail(anime) {
           <h3>📝 Sinopsis</h3>
           <div class="synopsis">${detail.description || 'Tidak ada sinopsis.'}</div>
           
-          <h3>🎬 Episode</h3>
+          <h3>🎬 Daftar Episode</h3>
+          <p style="font-size:0.8rem; color:#888;">Klik episode untuk menonton (terbuka di tab baru)</p>
           <div class="episodes-grid" id="episodesGrid">
             ${generateEpisodeButtons(episodeCount, detail.idMal || detail.id)}
           </div>
@@ -267,7 +287,7 @@ async function showDetail(anime) {
     
     window.scrollTo(0, 0);
   } catch (e) {
-    animeDetail.innerHTML = '<p style="color:red;">❌ Gagal memuat detail.</p>';
+    animeDetail.innerHTML = '<p style="color:red; text-align:center; padding:2rem;">❌ Gagal memuat detail. Coba lagi.</p>';
   }
   
   hideLoading();
@@ -276,6 +296,9 @@ async function showDetail(anime) {
 function generateEpisodeButtons(count, malId) {
   let buttons = '';
   const maxShow = Math.min(count, 100);
+  if (maxShow === 0) {
+    return '<p style="color:#888;">Jumlah episode tidak diketahui.</p>';
+  }
   for (let i = 1; i <= maxShow; i++) {
     buttons += `<button class="ep-btn" onclick="watchAnime(${malId}, ${i})">${i}</button>`;
   }
@@ -283,53 +306,70 @@ function generateEpisodeButtons(count, malId) {
 }
 
 // ======================
-// WATCH ANIME (UPDATED)
+// WATCH ANIME
 // ======================
 function watchAnime(malId, epNum) {
   showLoading();
   currentEpNum = epNum;
   currentSourceIndex = 0;
   
+  const animeTitle = (currentAnime?.title?.english || currentAnime?.title?.romaji || 'anime')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  
   animeSection.style.display = 'none';
   detailSection.style.display = 'none';
   watchSection.style.display = 'block';
   
   const sources = [
-    { name: 'VidSrc XYZ', url: EMBED_SOURCES.vidSrc(malId, epNum) },
-    { name: 'VidSrc ME', url: EMBED_SOURCES.vidSrc2(malId, epNum) },
-    { name: 'VidSrc IN', url: EMBED_SOURCES.vidSrc3(malId, epNum) },
-    { name: '2Embed', url: EMBED_SOURCES.twoEmbed(malId, epNum) },
+    { name: 'Samehadaku', url: EMBED_SOURCES.samehadaku(animeTitle, epNum) },
+    { name: 'Otakudesu', url: EMBED_SOURCES.otakudesu(animeTitle, epNum) },
+    { name: 'Anoboy', url: EMBED_SOURCES.anoboy(animeTitle, epNum) },
+    { name: 'AnimeIndo', url: EMBED_SOURCES.animeindo(animeTitle, epNum) },
   ];
   
+  const currentAnimeTitle = currentAnime?.title?.english || currentAnime?.title?.romaji || 'Anime';
+  
   watchContainer.innerHTML = `
-    <div class="video-wrapper">
-      <iframe 
-        id="videoFrame" 
-        src="${sources[0].url}"
-        allowfullscreen="true"
-        allow="autoplay; encrypted-media"
-        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
-      ></iframe>
+    <div class="video-wrapper" style="text-align:center; padding:2rem;">
+      <p style="color:#ff4757; font-size:1.2rem; margin-bottom:1rem;">
+        🎬 ${currentAnimeTitle} - Episode ${epNum}
+      </p>
+      <p style="color:#ccc; margin-bottom:1.5rem;">
+        Klik tombol di bawah untuk menonton di tab baru
+      </p>
+      <a href="${sources[0].url}" target="_blank" id="watchLink" 
+         style="display:inline-block; padding:1rem 2.5rem; background:#ff4757; color:white; 
+                text-decoration:none; border-radius:10px; font-weight:bold; font-size:1.2rem;
+                transition: transform 0.3s, box-shadow 0.3s;"
+         onmouseover="this.style.transform='scale(1.05)'; this.style.boxShadow='0 5px 20px rgba(255,71,87,0.5)';"
+         onmouseout="this.style.transform='scale(1)'; this.style.boxShadow='none';">
+        ▶ TONTON EPISODE ${epNum}
+      </a>
+      <p style="color:#888; font-size:0.8rem; margin-top:1rem;">
+        Video akan terbuka di tab baru
+      </p>
     </div>
     
     <div class="episode-nav">
-      <button onclick="changeEp(-1)" ${epNum <= 1 ? 'disabled' : ''}>⬅ Ep Sebelumnya</button>
+      <button onclick="changeEp(-1)" ${epNum <= 1 ? 'disabled' : ''} style="padding:0.5rem 1rem; background:#333; color:white; border:none; border-radius:5px; cursor:pointer;">⬅ Ep Sebelumnya</button>
       
-      <select id="epSelect" onchange="jumpToEp()">
-        ${Array.from({length: episodeCount}, (_, i) => i + 1).map(n => 
+      <select id="epSelect" onchange="jumpToEp()" style="padding:0.5rem; background:#1a1a1a; color:white; border:1px solid #333; border-radius:5px;">
+        ${Array.from({length: Math.min(episodeCount, 200)}, (_, i) => i + 1).map(n => 
           `<option value="${n}" ${n === epNum ? 'selected' : ''}>Episode ${n}</option>`
         ).join('')}
       </select>
       
-      <button onclick="changeEp(1)" ${epNum >= episodeCount ? 'disabled' : ''}>Ep Selanjutnya ➡</button>
+      <button onclick="changeEp(1)" ${epNum >= episodeCount ? 'disabled' : ''} style="padding:0.5rem 1rem; background:#333; color:white; border:none; border-radius:5px; cursor:pointer;">Ep Selanjutnya ➡</button>
     </div>
     
-    <div style="text-align:center; margin-top:1rem;">
-      <p style="font-size:0.8rem; color:#888; margin-bottom:0.5rem;">
-        Source: ${sources[0].name}
+    <div style="text-align:center; margin-top:1.5rem;">
+      <p style="font-size:0.85rem; color:#ff4757; margin-bottom:0.8rem;">
+        📺 Source aktif: <strong id="sourceLabel">${sources[0].name}</strong>
       </p>
-      <button onclick="tryNextSource(${malId}, ${epNum})" style="padding:0.5rem 1rem; background:#ff4757; color:white; border:none; border-radius:5px; cursor:pointer;">
-        🔄 Ganti Source (${sources.length} tersedia)
+      <button onclick="tryNextSource(${malId}, ${epNum})" style="padding:0.6rem 1.5rem; background:#333; color:white; border:1px solid #555; border-radius:5px; cursor:pointer; transition: background 0.3s;" onmouseover="this.style.background='#ff4757';" onmouseout="this.style.background='#333';">
+        🔄 Ganti Source (${sources.length} pilihan)
       </button>
     </div>
   `;
@@ -339,29 +379,35 @@ function watchAnime(malId, epNum) {
 }
 
 // ======================
-// SWITCH SOURCE (UPDATED)
+// SWITCH SOURCE
 // ======================
 function tryNextSource(malId, epNum) {
   currentSourceIndex = (currentSourceIndex + 1) % totalSources;
   
+  const animeTitle = (currentAnime?.title?.english || currentAnime?.title?.romaji || 'anime')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-|-$/g, '');
+  
   const allSources = [
-    EMBED_SOURCES.vidSrc(malId, epNum),
-    EMBED_SOURCES.vidSrc2(malId, epNum),
-    EMBED_SOURCES.vidSrc3(malId, epNum),
-    EMBED_SOURCES.twoEmbed(malId, epNum),
+    EMBED_SOURCES.samehadaku(animeTitle, epNum),
+    EMBED_SOURCES.otakudesu(animeTitle, epNum),
+    EMBED_SOURCES.anoboy(animeTitle, epNum),
+    EMBED_SOURCES.animeindo(animeTitle, epNum),
   ];
   
-  const sourceNames = ['VidSrc XYZ', 'VidSrc ME', 'VidSrc IN', '2Embed'];
+  const sourceNames = ['Samehadaku', 'Otakudesu', 'Anoboy', 'AnimeIndo'];
   
-  const frame = document.getElementById('videoFrame');
-  if (frame) {
-    frame.src = allSources[currentSourceIndex];
-    
-    // Update source text
-    const sourceText = document.querySelector('.episode-nav + div p');
-    if (sourceText) {
-      sourceText.textContent = `Source: ${sourceNames[currentSourceIndex]}`;
-    }
+  const link = document.getElementById('watchLink');
+  const label = document.getElementById('sourceLabel');
+  
+  if (link) {
+    link.href = allSources[currentSourceIndex];
+    link.textContent = `▶ TONTON EPISODE ${epNum}`;
+  }
+  
+  if (label) {
+    label.textContent = sourceNames[currentSourceIndex];
   }
 }
 
@@ -378,6 +424,7 @@ function changeEp(delta) {
 
 function jumpToEp() {
   const select = document.getElementById('epSelect');
+  if (!select) return;
   const newEp = parseInt(select.value);
   const malId = currentAnime?.idMal || currentAnime?.id;
   watchAnime(malId, newEp);
@@ -392,7 +439,7 @@ searchBtn.addEventListener('click', () => {
   if (q) {
     currentSearch = q;
     currentView = 'search';
-    listTitle.textContent = `🔍 Hasil: "${q}"`;
+    listTitle.textContent = `🔍 Hasil Pencarian: "${q}"`;
     searchAniList(q, 1);
   }
 });
@@ -427,9 +474,11 @@ document.getElementById('popularLink').addEventListener('click', (e) => {
 
 prevPageBtn.addEventListener('click', () => {
   const page = currentPage - 1;
-  if (currentView === 'trending') fetchTrending(page);
-  else if (currentView === 'popular') fetchPopular(page);
-  else if (currentView === 'search') searchAniList(currentSearch, page);
+  if (page >= 1) {
+    if (currentView === 'trending') fetchTrending(page);
+    else if (currentView === 'popular') fetchPopular(page);
+    else if (currentView === 'search') searchAniList(currentSearch, page);
+  }
 });
 
 nextPageBtn.addEventListener('click', () => {
