@@ -9,10 +9,11 @@
 <body>
   <!-- HEADER -->
   <header>
-    <div class="logo">AnimeKu</div>
+    <div class="logo">🎬 AnimeKu</div>
     <nav>
       <a href="#" id="homeLink">🏠 Home</a>
-      <a href="#" id="popularLink">🔥 Populer</a>
+      <a href="#" id="trendingLink">🔥 Trending</a>
+      <a href="#" id="popularLink">⭐ Populer</a>
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="Cari anime...">
         <button id="searchBtn">🔍</button>
@@ -23,14 +24,14 @@
   <!-- HERO -->
   <section class="hero">
     <h1>AnimeKu</h1>
-    <p>Nonton anime subtitle Indonesia gratis</p>
+    <p>Nonton anime favoritmu gratis subtitle Indonesia</p>
   </section>
 
-  <!-- KONTEN UTAMA -->
+  <!-- KONTEN -->
   <main>
     <!-- DAFTAR ANIME -->
     <section class="anime-section" id="animeSection">
-      <h2 id="listTitle">🔥 Anime Terpopuler</h2>
+      <h2 id="listTitle">🔥 Trending Anime</h2>
       <div class="grid" id="animeGrid"></div>
       <div class="pagination">
         <button id="prevPageBtn" style="display:none;">⬅ Sebelumnya</button>
@@ -39,28 +40,28 @@
       </div>
     </section>
 
-    <!-- HALAMAN DETAIL ANIME -->
+    <!-- DETAIL ANIME -->
     <section class="detail-section" id="detailSection" style="display:none;">
-      <button id="backBtn">⬅ Kembali</button>
+      <button class="back-btn" id="backBtn">⬅ Kembali</button>
       <div id="animeDetail"></div>
     </section>
 
     <!-- HALAMAN NONTON -->
     <section class="watch-section" id="watchSection" style="display:none;">
-      <button id="backFromWatchBtn">⬅ Kembali ke Detail</button>
+      <button class="back-btn" id="backFromWatchBtn">⬅ Kembali ke Detail</button>
       <div id="watchContainer"></div>
     </section>
   </main>
 
-  <!-- MODAL LOADING -->
-  <div class="loading-modal" id="loadingModal" style="display:none;">
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loadingOverlay" style="display:none;">
     <div class="spinner"></div>
     <p>Memuat...</p>
   </div>
 
   <!-- FOOTER -->
   <footer>
-    <p>© 2026 AnimeKu. Data dari Consumet API. Untuk pembelajaran.</p>
+    <p>© 2026 AnimeKu. Data dari AniList API. Untuk pembelajaran.</p>
   </footer>
 
   <script src="script.js"></script>
