@@ -3,48 +3,64 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AnimeKu API - Nonton Anime</title>
+  <title>AnimeKu - Nonton Anime Sub Indo</title>
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
+  <!-- HEADER -->
   <header>
     <div class="logo">AnimeKu</div>
     <nav>
-      <a href="#" id="homeLink">Home</a>
+      <a href="#" id="homeLink">🏠 Home</a>
+      <a href="#" id="popularLink">🔥 Populer</a>
       <div class="search-box">
         <input type="text" id="searchInput" placeholder="Cari anime...">
-        <button id="searchBtn">Cari</button>
+        <button id="searchBtn">🔍</button>
       </div>
     </nav>
   </header>
 
+  <!-- HERO -->
   <section class="hero">
-    <h1>Selamat Datang di AnimeKu</h1>
-    <p>Database anime terlengkap dari seluruh dunia</p>
+    <h1>AnimeKu</h1>
+    <p>Nonton anime subtitle Indonesia gratis</p>
   </section>
 
-  <main class="anime-list">
-    <h2 id="listTitle">Anime Terpopuler</h2>
-    <div class="grid" id="animeGrid">
-      <!-- Kartu anime akan dimuat di sini oleh JavaScript -->
-    </div>
-    <div class="pagination">
-      <button id="loadMoreBtn">Muat Lebih Banyak</button>
-    </div>
+  <!-- KONTEN UTAMA -->
+  <main>
+    <!-- DAFTAR ANIME -->
+    <section class="anime-section" id="animeSection">
+      <h2 id="listTitle">🔥 Anime Terpopuler</h2>
+      <div class="grid" id="animeGrid"></div>
+      <div class="pagination">
+        <button id="prevPageBtn" style="display:none;">⬅ Sebelumnya</button>
+        <span id="pageInfo"></span>
+        <button id="nextPageBtn" style="display:none;">Selanjutnya ➡</button>
+      </div>
+    </section>
+
+    <!-- HALAMAN DETAIL ANIME -->
+    <section class="detail-section" id="detailSection" style="display:none;">
+      <button id="backBtn">⬅ Kembali</button>
+      <div id="animeDetail"></div>
+    </section>
+
+    <!-- HALAMAN NONTON -->
+    <section class="watch-section" id="watchSection" style="display:none;">
+      <button id="backFromWatchBtn">⬅ Kembali ke Detail</button>
+      <div id="watchContainer"></div>
+    </section>
   </main>
 
-  <!-- Modal untuk Detail Anime -->
-  <div id="animeModal" class="modal">
-    <div class="modal-content">
-      <span class="close">&times;</span>
-      <div id="modalDetails">
-        <!-- Detail akan diisi oleh JavaScript -->
-      </div>
-    </div>
+  <!-- MODAL LOADING -->
+  <div class="loading-modal" id="loadingModal" style="display:none;">
+    <div class="spinner"></div>
+    <p>Memuat...</p>
   </div>
 
+  <!-- FOOTER -->
   <footer>
-    <p>&copy; 2025 AnimeKu. Data dari Jikan API.</p>
+    <p>© 2026 AnimeKu. Data dari Consumet API. Untuk pembelajaran.</p>
   </footer>
 
   <script src="script.js"></script>
