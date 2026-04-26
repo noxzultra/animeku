@@ -1,78 +1,134 @@
-// Konfigurasi
-const API_BASE = 'https://api.jikan.moe/v4';
-let currentPage = 1;
-let currentQuery = '';
-let isLoading = false;
+// ======================
+// KONFIGURASI API
+// ======================
+const CONSUMET_API = 'https://api.consumet.org/anime/gogoanime';
+const CORS_PROXY = 'https://corsproxy.io/?'; // Proxy untuk handle CORS
 
-// Ambil elemen HTML
+// ======================
+// STATE MANAGEMENT
+// ======================
+let currentPage = 1;
+let totalPages = 1;
+let currentSearch = '';
+let currentAnimeId = '';
+let currentEpisodeId = '';
+let episodesList = [];
+
+// ======================
+// DOM ELEMENTS
+// ======================
 const animeGrid = document.getElementById('animeGrid');
+const listTitle = document.getElementById('listTitle');
 const searchInput = document.getElementById('searchInput');
 const searchBtn = document.getElementById('searchBtn');
-const loadMoreBtn = document.getElementById('loadMoreBtn');
-const listTitle = document.getElementById('listTitle');
+const prevPageBtn = document.getElementById('prevPageBtn');
+const nextPageBtn = document.getElementById('nextPageBtn');
+const pageInfo = document.getElementById('pageInfo');
+const loadingModal = document.getElementById('loadingModal');
+const animeSection = document.getElementById('animeSection');
+const detailSection = document.getElementById('detailSection');
+const watchSection = document.getElementById('watchSection');
+const animeDetail = document.getElementById('animeDetail');
+const watchContainer = document.getElementById('watchContainer');
 const homeLink = document.getElementById('homeLink');
-
-// Modal
-const modal = document.getElementById('animeModal');
-const modalDetails = document.getElementById('modalDetails');
-const closeModal = document.querySelector('.close');
+const popularLink = document.getElementById('popularLink');
 
 // ======================
-// FUNGSI FETCH DATA
+// FUNGSI LOADING
 // ======================
-async function fetchAnime(query = '', page = 1) {
-  if (isLoading) return;
-  isLoading = true;
-  showLoading();
+function showLoading() {
+  loadingModal.style.display = 'flex';
+}
 
-  try {
-    let url;
-    if (query) {
-      // Cari anime berdasarkan keyword
-      url = `${API_BASE}/anime?q=${encodeURIComponent(query)}&page=${page}&limit=12`;
-    } else {
-      // Ambil anime terpopuler
-      url = `${API_BASE}/top/anime?page=${page}&limit=12`;
-    }
-
-    const response = await fetch(url);
-    if (!response.ok) throw new Error('Gagal fetch');
-    
-    const data = await response.json();
-    renderAnime(data.data, page === 1); // Jika halaman 1, hapus grid dulu
-    loadMoreBtn.style.display = data.pagination.has_next_page ? 'inline-block' : 'none';
-  } catch (error) {
-    console.error('Error:', error);
-    animeGrid.innerHTML = '<p style="color:red;">Gagal memuat data. Coba lagi nanti.</p>';
-  } finally {
-    isLoading = false;
-    hideLoading();
-  }
+function hideLoading() {
+  loadingModal.style.display = 'none';
 }
 
 // ======================
-// FUNGSI RENDER KARTU
+// FUNGSI FETCH & RENDER
 // ======================
-function renderAnime(animeList, clearGrid = false) {
-  if (clearGrid) animeGrid.innerHTML = '';
+async function fetchPopularAnime(page = 1) {
+  showLoading();
+  try {
+    const url = `${CORS_PROXY}${encodeURIComponent(`${CONSUMET_API}/popular?page=${page}`)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (data.results) {
+      renderAnimeGrid(data.results);
+      totalPages = data.totalPages || 1;
+      currentPage = page;
+      updatePagination();
+    }
+  } catch (error) {
+    console.error('Error:', error);
+    // Fallback: coba langsung tanpa proxy
+    try {
+      const res = await fetch(`${CONSUMET_API}/popular?page=${page}`);
+      const data = await res.json();
+      if (data.results) {
+        renderAnimeGrid(data.results);
+        totalPages = data.totalPages || 1;
+        currentPage = page;
+        updatePagination();
+      }
+    } catch (err) {
+      animeGrid.innerHTML = '<p style="color:red;">❌ Gagal memuat. Coba refresh.</p>';
+    }
+  }
+  hideLoading();
+}
 
+async function searchAnime(query, page = 1) {
+  showLoading();
+  try {
+    const url = `${CORS_PROXY}${encodeURIComponent(`${CONSUMET_API}/${query}?page=${page}`)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+    
+    if (data.results) {
+      renderAnimeGrid(data.results);
+      totalPages = data.totalPages || 1;
+      currentPage = page;
+      updatePagination();
+    }
+  } catch (error) {
+    try {
+      const res = await fetch(`${CONSUMET_API}/${query}?page=${page}`);
+      const data = await res.json();
+      if (data.results) {
+        renderAnimeGrid(data.results);
+        totalPages = data.totalPages || 1;
+        currentPage = page;
+        updatePagination();
+      }
+    } catch (err) {
+      animeGrid.innerHTML = '<p style="color:red;">❌ Anime tidak ditemukan.</p>';
+    }
+  }
+  hideLoading();
+}
+
+function renderAnimeGrid(animeList) {
+  animeGrid.innerHTML = '';
+  
   if (!animeList || animeList.length === 0) {
-    animeGrid.innerHTML += '<p>Tidak ada anime ditemukan.</p>';
+    animeGrid.innerHTML = '<p>Tidak ada anime ditemukan.</p>';
     return;
   }
 
   animeList.forEach(anime => {
     const card = document.createElement('div');
     card.className = 'card';
-    card.onclick = () => showAnimeDetail(anime.mal_id);
+    card.onclick = () => showAnimeDetail(anime.id);
 
     card.innerHTML = `
-      <img src="${anime.images.jpg.large_image_url}" alt="${anime.title}" loading="lazy">
+      <img src="${anime.image}" alt="${anime.title}" loading="lazy" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
       <div class="info">
         <div class="title">${anime.title}</div>
         <div class="meta">
           <span>${anime.type || 'N/A'}</span>
-          <span class="score">⭐ ${anime.score ?? '?'}</span>
+          <span class="status">${anime.status || ''}</span>
         </div>
       </div>
     `;
@@ -81,101 +137,279 @@ function renderAnime(animeList, clearGrid = false) {
   });
 }
 
-// ======================
-// FUNGSI MODAL DETAIL
-// ======================
-async function showAnimeDetail(id) {
-  try {
-    const response = await fetch(`${API_BASE}/anime/${id}/full`);
-    const data = await response.json();
-    const anime = data.data;
+function updatePagination() {
+  prevPageBtn.style.display = currentPage > 1 ? 'inline-block' : 'none';
+  nextPageBtn.style.display = currentPage < totalPages ? 'inline-block' : 'none';
+  pageInfo.textContent = `Halaman ${currentPage} dari ${totalPages}`;
+  pageInfo.style.display = totalPages > 1 ? 'inline' : 'none';
+}
 
-    modalDetails.innerHTML = `
-      <h2>${anime.title}</h2>
-      <img src="${anime.images.jpg.large_image_url}" alt="${anime.title}">
-      <div class="info-row">
-        <span>📺 ${anime.type}</span>
-        <span>📊 ${anime.status}</span>
-        <span>⭐ ${anime.score ?? 'N/A'}</span>
-        <span>🎬 ${anime.episodes ?? '?'} eps</span>
-        <span>📅 ${anime.year ?? 'N/A'}</span>
+// ======================
+// FUNGSI DETAIL ANIME
+// ======================
+async function showAnimeDetail(animeId) {
+  showLoading();
+  currentAnimeId = animeId;
+  
+  try {
+    const url = `${CORS_PROXY}${encodeURIComponent(`${CONSUMET_API}/info/${animeId}`)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    // Sembunyikan section lain
+    animeSection.style.display = 'none';
+    detailSection.style.display = 'block';
+    watchSection.style.display = 'none';
+
+    // Simpan daftar episode
+    episodesList = data.episodes || [];
+
+    // Render detail
+    animeDetail.innerHTML = `
+      <div class="detail-container">
+        <img src="${data.image}" alt="${data.title}" onerror="this.src='https://via.placeholder.com/300x400?text=No+Image'">
+        <div class="detail-info">
+          <h2>${data.title}</h2>
+          <div class="meta-tags">
+            <span>📺 ${data.type || 'N/A'}</span>
+            <span>📊 ${data.status || 'N/A'}</span>
+            <span>🎬 ${data.totalEpisodes || '?'} Episode</span>
+            <span>📅 ${data.releaseDate || 'N/A'}</span>
+          </div>
+          <h3>Sinopsis</h3>
+          <p class="synopsis">${data.description || 'Tidak ada sinopsis.'}</p>
+          
+          <h3>🎬 Daftar Episode</h3>
+          <div class="episodes-grid">
+            ${episodesList.slice(0, 50).map(ep => `
+              <button class="ep-btn" onclick="watchEpisode('${ep.id}', '${data.id}')">
+                ${ep.number}
+              </button>
+            `).join('')}
+          </div>
+        </div>
       </div>
-      <h3>Sinopsis</h3>
-      <p class="synopsis">${anime.synopsis || 'Tidak ada sinopsis.'}</p>
     `;
 
-    modal.style.display = 'block';
-    document.body.style.overflow = 'hidden';
+    window.scrollTo(0, 0);
   } catch (error) {
-    console.error('Gagal ambil detail:', error);
+    try {
+      const res = await fetch(`${CONSUMET_API}/info/${animeId}`);
+      const data = await res.json();
+      
+      animeSection.style.display = 'none';
+      detailSection.style.display = 'block';
+      watchSection.style.display = 'none';
+      
+      episodesList = data.episodes || [];
+      
+      animeDetail.innerHTML = `
+        <div class="detail-container">
+          <img src="${data.image}" alt="${data.title}">
+          <div class="detail-info">
+            <h2>${data.title}</h2>
+            <div class="meta-tags">
+              <span>📺 ${data.type || 'N/A'}</span>
+              <span>📊 ${data.status || 'N/A'}</span>
+              <span>🎬 ${data.totalEpisodes || '?'} Episode</span>
+            </div>
+            <h3>Sinopsis</h3>
+            <p class="synopsis">${data.description || 'Tidak ada sinopsis.'}</p>
+            
+            <h3>🎬 Daftar Episode</h3>
+            <div class="episodes-grid">
+              ${episodesList.slice(0, 50).map(ep => `
+                <button class="ep-btn" onclick="watchEpisode('${ep.id}', '${data.id}')">
+                  ${ep.number}
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      `;
+    } catch (err) {
+      animeDetail.innerHTML = '<p style="color:red;">❌ Gagal memuat detail.</p>';
+    }
   }
+  
+  hideLoading();
 }
 
 // ======================
-// LOADING
+// FUNGSI NONTON EPISODE
 // ======================
-function showLoading() {
-  const loader = document.createElement('div');
-  loader.className = 'loading';
-  loader.id = 'loader';
-  loader.textContent = 'Memuat...';
-  animeGrid.appendChild(loader);
+async function watchEpisode(episodeId, animeId) {
+  showLoading();
+  currentEpisodeId = episodeId;
+  
+  try {
+    const url = `${CORS_PROXY}${encodeURIComponent(`${CONSUMET_API}/watch/${episodeId}`)}`;
+    const res = await fetch(url);
+    const data = await res.json();
+
+    // Sembunyikan section lain
+    animeSection.style.display = 'none';
+    detailSection.style.display = 'none';
+    watchSection.style.display = 'block';
+
+    // Cari sumber video
+    const videoSource = data.sources?.find(s => s.quality === 'default' || s.quality === '720p') || data.sources?.[0];
+    const embedUrl = data.headers?.Referer 
+      ? `${data.headers.Referer}?url=${encodeURIComponent(videoSource?.url || '')}` 
+      : videoSource?.url || '';
+
+    // Render halaman nonton
+    watchContainer.innerHTML = `
+      <div class="video-container">
+        <iframe 
+          src="${videoSource?.url || ''}" 
+          allowfullscreen="true"
+          frameborder="0"
+          sandbox="allow-same-origin allow-scripts"
+        ></iframe>
+      </div>
+      
+      <div class="episode-selector" style="margin-top: 1.5rem; display: flex; justify-content: center; gap: 1rem; flex-wrap: wrap;">
+        <select id="episodeSelect" style="padding: 0.6rem 1rem; background: #1e1e1e; color: white; border: 1px solid #333; border-radius: 8px;">
+          ${episodesList.map((ep, idx) => `
+            <option value="${ep.id}" ${ep.id === episodeId ? 'selected' : ''}>
+              Episode ${ep.number}
+            </option>
+          `).join('')}
+        </select>
+        <button onclick="changeEpisode()" style="padding: 0.6rem 1.5rem; background: #ff4757; border: none; color: white; border-radius: 8px; cursor: pointer;">
+          ➤ Tonton
+        </button>
+      </div>
+    `;
+
+    window.scrollTo(0, 0);
+  } catch (error) {
+    try {
+      const res = await fetch(`${CONSUMET_API}/watch/${episodeId}`);
+      const data = await res.json();
+      
+      animeSection.style.display = 'none';
+      detailSection.style.display = 'none';
+      watchSection.style.display = 'block';
+      
+      const videoSource = data.sources?.find(s => s.quality === 'default' || s.quality === '720p') || data.sources?.[0];
+      
+      watchContainer.innerHTML = `
+        <div class="video-container">
+          <iframe src="${videoSource?.url || ''}" allowfullscreen></iframe>
+        </div>
+        
+        <div class="episode-selector" style="margin-top: 1.5rem;">
+          <select id="episodeSelect" style="padding: 0.6rem 1rem;">
+            ${episodesList.map(ep => `
+              <option value="${ep.id}" ${ep.id === episodeId ? 'selected' : ''}>
+                Episode ${ep.number}
+              </option>
+            `).join('')}
+          </select>
+          <button onclick="changeEpisode()">➤ Tonton</button>
+        </div>
+      `;
+    } catch (err) {
+      watchContainer.innerHTML = '<p style="color:red;">❌ Gagal memuat video. Episode mungkin tidak tersedia.</p>';
+    }
+  }
+  
+  hideLoading();
 }
 
-function hideLoading() {
-  const loader = document.getElementById('loader');
-  if (loader) loader.remove();
+// Fungsi ganti episode
+function changeEpisode() {
+  const select = document.getElementById('episodeSelect');
+  if (select) {
+    const newEpisodeId = select.value;
+    watchEpisode(newEpisodeId, currentAnimeId);
+  }
 }
 
 // ======================
 // EVENT LISTENERS
 // ======================
 
-// Cari anime
+// Tombol search
 searchBtn.addEventListener('click', () => {
-  currentQuery = searchInput.value.trim();
-  currentPage = 1;
-  listTitle.textContent = currentQuery ? `Hasil Pencarian: "${currentQuery}"` : 'Anime Terpopuler';
-  fetchAnime(currentQuery, currentPage);
-});
-
-// Tekan Enter di kolom search
-searchInput.addEventListener('keypress', (e) => {
-  if (e.key === 'Enter') {
-    searchBtn.click();
+  const query = searchInput.value.trim();
+  if (query) {
+    currentSearch = query;
+    listTitle.textContent = `🔍 Hasil Pencarian: "${query}"`;
+    searchAnime(query, 1);
   }
 });
 
-// Tombol "Muat Lebih Banyak"
-loadMoreBtn.addEventListener('click', () => {
-  currentPage++;
-  fetchAnime(currentQuery, currentPage);
+// Enter di search
+searchInput.addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') searchBtn.click();
 });
 
-// Klik "Home" untuk reset
+// Pagination
+prevPageBtn.addEventListener('click', () => {
+  if (currentPage > 1) {
+    const newPage = currentPage - 1;
+    if (currentSearch) {
+      searchAnime(currentSearch, newPage);
+    } else {
+      fetchPopularAnime(newPage);
+    }
+  }
+});
+
+nextPageBtn.addEventListener('click', () => {
+  if (currentPage < totalPages) {
+    const newPage = currentPage + 1;
+    if (currentSearch) {
+      searchAnime(currentSearch, newPage);
+    } else {
+      fetchPopularAnime(newPage);
+    }
+  }
+});
+
+// Home
 homeLink.addEventListener('click', (e) => {
   e.preventDefault();
-  currentQuery = '';
-  currentPage = 1;
+  currentSearch = '';
   searchInput.value = '';
-  listTitle.textContent = 'Anime Terpopuler';
-  fetchAnime('', 1);
+  listTitle.textContent = '🔥 Anime Terpopuler';
+  animeSection.style.display = 'block';
+  detailSection.style.display = 'none';
+  watchSection.style.display = 'none';
+  fetchPopularAnime(1);
 });
 
-// Tutup modal
-closeModal.onclick = () => {
-  modal.style.display = 'none';
-  document.body.style.overflow = 'auto';
-};
+// Popular
+popularLink.addEventListener('click', (e) => {
+  e.preventDefault();
+  currentSearch = '';
+  searchInput.value = '';
+  listTitle.textContent = '🔥 Anime Terpopuler';
+  animeSection.style.display = 'block';
+  detailSection.style.display = 'none';
+  watchSection.style.display = 'none';
+  fetchPopularAnime(1);
+});
 
-window.onclick = (event) => {
-  if (event.target === modal) {
-    modal.style.display = 'none';
-    document.body.style.overflow = 'auto';
+// Tombol kembali
+document.addEventListener('click', (e) => {
+  if (e.target.id === 'backBtn') {
+    animeSection.style.display = 'block';
+    detailSection.style.display = 'none';
+    watchSection.style.display = 'none';
   }
-};
+  
+  if (e.target.id === 'backFromWatchBtn') {
+    animeSection.style.display = 'none';
+    detailSection.style.display = 'block';
+    watchSection.style.display = 'none';
+  }
+});
 
 // ======================
-// LOAD PERTAMA KALI
+// LOAD PERTAMA
 // ======================
-fetchAnime('', 1);
+fetchPopularAnime(1);
