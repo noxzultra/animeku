@@ -5,14 +5,17 @@ const ANILIST_API = 'https://graphql.anilist.co';
 
 // Multi-source embed player
 const EMBED_SOURCES = {
-  // Source 1: VidSrc (paling stabil)
-  vidSrc: (malId, epNum) => `https://vidsrc.to/embed/anime/${malId}/${epNum}`,
+  // VidSrc (pakai subdomain baru)
+  vidSrc: (malId, epNum) => `https://vidsrc.xyz/embed/anime/${malId}/${epNum}`,
   
-  // Source 2: 2embed
+  // VidSrc alternative domain
+  vidSrc2: (malId, epNum) => `https://vidsrc.me/embed/anime/${malId}/${epNum}`,
+  
+  // VidSrc backup
+  vidSrc3: (malId, epNum) => `https://vidsrc.in/embed/anime/${malId}/${epNum}`,
+  
+  // 2embed (backup)
   twoEmbed: (malId, epNum) => `https://www.2embed.cc/embed/${malId}/${epNum}`,
-  
-  // Source 3: VidStream (backup)
-  vidStream: (malId, epNum) => `https://vidstream.pro/anime/mal/${malId}/episode/${epNum}`,
 };
 
 // ======================
